@@ -1,0 +1,10 @@
+paddleocr>=2.7.0
+paddlepaddle>=2.5.0
+Pillow>=10.0.0
+opencv-python>=4.8.0
+pandas>=2.0.0
+openpyxl>=3.1.0
+python-dateutil>=2.8.0
+colorlog>=6.7.0
+python-dotenv>=1.0.0
+pydantic>=2.0.0
