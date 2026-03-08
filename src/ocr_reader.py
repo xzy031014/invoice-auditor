@@ -1,31 +1,30 @@
 """
-OCR识别模块 - 使用PaddleOCR提取发票信息
+OCR识别模块 - 使用RapidOCR提取发票信息
 """
 import os
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from pathlib import Path
-from paddleocr import PaddleOCR
-from PIL import Image
+from rapidocr_onnxruntime import RapidOCR
 import logging
 
 logger = logging.getLogger(__name__)
 
 
 class OCRReader:
-    """发票OCR识别器"""
+    """发票OCR识别器 - 使用RapidOCR"""
 
     def __init__(self, use_gpu: bool = False, lang: str = 'ch'):
         """
         初始化OCR引擎
 
         Args:
-            use_gpu: 是否使用GPU加速
+            use_gpu: 是否使用GPU加速（RapidOCR暂不支持）
             lang: 语言设置，'ch'为中文，'en'为英文
         """
-        # 新版PaddleOCR 3.4+ 简化参数
-        self.ocr = PaddleOCR(lang=lang, use_angle_cls=True)
-        logger.info("OCR引擎初始化完成")
+        # RapidOCR初始化
+        self.ocr = RapidOCR()
+        logger.info("OCR引擎初始化完成 (RapidOCR)")
 
     def read_image(self, image_path: str) -> List[Dict]:
         """
@@ -41,18 +40,28 @@ class OCRReader:
             raise FileNotFoundError(f"图片文件不存在: {image_path}")
 
         try:
-            result = self.ocr.ocr(image_path, cls=True)
+            result = self.ocr(image_path)
+
             if result and result[0]:
+                # RapidOCR 返回格式: result[0] 是 [[box, text, score], ...]
+                ocr_list = result[0]
+
+                if not ocr_list:
+                    logger.warning(f"未能从图片中识别到文本: {image_path}")
+                    return []
+
                 # 提取文本和位置信息
                 ocr_data = []
-                for line in result[0]:
-                    box = line[0]  # 坐标
-                    text_info = line[1]  # (文本, 置信度)
+                for item in ocr_list:
+                    box = item[0]  # 坐标 [[x1,y1], [x2,y2], [x3,y3], [x4,y4]]
+                    text = item[1]  # 文本
+                    score = item[2]  # 置信度
                     ocr_data.append({
-                        'text': text_info[0],
-                        'confidence': text_info[1],
+                        'text': text,
+                        'confidence': float(score),
                         'box': box
                     })
+
                 logger.info(f"成功识别图片: {image_path}, 识别到 {len(ocr_data)} 个文本块")
                 return ocr_data
             else:
